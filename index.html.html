@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DJK Quotation Generator</title>
+<style>
+  :root{
+    --ink:#1c2b2d;
+    --paper:#f7f5f0;
+    --panel:#ffffff;
+    --line:#d8d2c4;
+    --accent:#1f4e8c;
+    --accent-soft:#e7edf6;
+    --stamp:#1f4e8c;
+    --sans: 'IBM Plex Sans', Arial, sans-serif;
+    --serif: 'IBM Plex Serif', Georgia, serif;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:13px; line-height:1.5; }
+
+  .app{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:0; min-height:100vh; }
+  @media (max-width: 980px){ .app{ grid-template-columns: 1fr; } }
+
+  .form-col{ padding:26px 24px 60px; border-right:1px solid var(--line); }
+  h1{ font-family:var(--serif); font-weight:600; font-size:21px; margin:6px 0 2px; }
+  .sub{ color:#6b6459; font-size:12.5px; margin-bottom:18px; }
+
+  .fixed-header{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:12px 14px; display:flex; gap:12px; align-items:center; margin-bottom:22px; }
+  .fixed-header img{ width:46px; height:auto; flex-shrink:0; }
+  .fixed-header .co-text{ font-size:10.5px; color:#555; line-height:1.4; }
+  .fixed-header .co-text b{ display:block; font-size:12.5px; color:var(--ink); margin-bottom:2px; }
+  .fixed-header .locked-tag{ margin-left:auto; font-family:var(--mono); font-size:9.5px; color:var(--accent); border:1px solid var(--accent); padding:2px 6px; border-radius:2px; align-self:flex-start; white-space:nowrap; }
+
+  section.block{ margin-bottom:24px; padding-bottom:20px; border-bottom:1px dashed var(--line); }
+  section.block:last-of-type{ border-bottom:none; }
+  .block-title{ font-family:var(--serif); font-size:14px; font-weight:600; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+  .block-title .num{ font-family:var(--mono); font-size:11px; color:var(--accent); border:1px solid var(--accent-soft); background:var(--accent-soft); width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; }
+
+  label{ display:block; font-size:11.5px; color:#6b6459; margin-bottom:4px; font-weight:500; }
+  .field{ margin-bottom:12px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+  input[type=text], input[type=date], input[type=number], textarea, select{
+    width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:3px;
+    background:var(--panel); color:var(--ink); font-family:var(--sans); font-size:13px;
+  }
+  textarea{ resize:vertical; min-height:56px; font-family:var(--sans); font-size:12.5px; }
+  input:focus, textarea:focus, select:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .paste-box{ border:1px solid var(--line); background:var(--panel); border-radius:4px; padding:12px; margin-bottom:10px; }
+  .paste-box p{ margin:0 0 8px; font-size:11.5px; color:#6b6459; }
+  .paste-box textarea{ min-height:70px; font-family:var(--mono); font-size:11.5px; }
+  .btn{ font-family:var(--sans); font-weight:600; font-size:12.5px; border:1px solid var(--ink); background:var(--ink); color:var(--paper); padding:8px 14px; border-radius:3px; cursor:pointer; }
+  .btn.ghost{ background:transparent; color:var(--ink); }
+  .btn.small{ padding:5px 10px; font-size:11.5px; }
+  .btn.accent{ background:var(--accent); border-color:var(--accent); }
+  .btn:hover{ opacity:.85; } .btn:active{ transform:translateY(1px); }
+
+  table.items{ width:100%; border-collapse:collapse; font-size:11.5px; margin-top:6px; }
+  table.items th{ text-align:left; font-size:10px; letter-spacing:.03em; color:#6b6459; font-weight:600; padding:6px 5px; border-bottom:1px solid var(--line); }
+  table.items td{ padding:5px; border-bottom:1px solid #eee6d8; vertical-align:top; }
+  table.items input{ padding:5px 6px; font-size:11.5px; }
+  .col-desc{ min-width:130px; }
+  .col-narrow{ width:56px; }
+  .rm-row{ background:none; border:none; color:#a33; cursor:pointer; font-size:15px; line-height:1; padding:2px 6px; }
+
+  .pricing-strip{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; background:var(--accent-soft); border:1px solid #c9d7ec; padding:10px 12px; border-radius:4px; margin:14px 0; }
+  .pricing-strip label{ margin:0 0 3px; color:var(--accent); }
+
+  .generate-bar{ position:sticky; bottom:0; background:var(--paper); padding-top:14px; margin-top:8px; }
+  .generate-bar .btn{ width:100%; padding:13px; font-size:14px; }
+  .generate-bar .row2{ margin-top:8px; }
+  .status{ font-size:11.5px; color:#4a6b4d; margin-top:8px; min-height:14px; }
+
+  .db-list{ font-size:12px; }
+  .db-row{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #eee6d8; }
+  .db-row .meta{ flex:1; }
+  .db-row .meta b{ display:block; font-size:12.5px; }
+  .db-row .meta span{ color:#8a8377; font-size:11px; }
+  .db-empty{ color:#999; font-size:12px; padding:10px 0; }
+
+  .preview-col{ background:#efe9dc; padding:26px 24px; overflow:auto; }
+  .preview-col .sheet{ background:#fff; max-width:660px; margin:0 auto; padding:30px 28px; border:1px solid var(--line); box-shadow:0 6px 24px rgba(0,0,0,.08); font-size:11px; }
+  .letterhead{ display:flex; gap:12px; align-items:flex-start; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:10px; }
+  .letterhead img{ width:52px; }
+  .letterhead .co-block b{ font-family:var(--serif); font-size:14px; display:block; }
+  .letterhead .co-block div{ font-size:9.5px; color:#444; line-height:1.4; margin-top:3px; }
+  .qtitle{ text-align:center; font-family:var(--serif); font-weight:700; font-size:16px; letter-spacing:.08em; margin:8px 0 12px; }
+  .meta-grid{ display:grid; grid-template-columns:1fr 1fr; gap:2px 10px; font-size:11px; margin-bottom:10px; }
+  .meta-grid .k{ color:#777; }
+  .terms-table{ width:100%; border-collapse:collapse; font-size:10.5px; margin:10px 0; }
+  .terms-table td{ padding:3px 4px; vertical-align:top; }
+  .terms-table td.k{ width:120px; color:#555; font-weight:600; }
+  table.preview-items{ width:100%; border-collapse:collapse; font-size:10px; margin:10px 0; }
+  table.preview-items th{ background:var(--stamp); color:#fff; padding:5px 4px; text-align:left; font-weight:600; }
+  table.preview-items td{ padding:4px; border-bottom:1px solid #e6e2d6; }
+  table.preview-items td.num{ text-align:right; font-family:var(--mono); }
+  .grand{ text-align:right; font-weight:700; font-size:12px; margin-top:6px; border-top:2px solid var(--ink); padding-top:6px; }
+  .remarks{ margin-top:14px; font-size:10.5px; }
+  .remarks li{ margin-bottom:2px; }
+  .sign{ margin-top:22px; font-size:11px; }
+  .sign .name{ font-weight:600; margin-top:26px; }
+  .empty-hint{ text-align:center; color:#999; font-size:11.5px; padding:40px 10px; }
+
+  /* ===== PRINT ===== */
+  #printArea{ display:none; }
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{ display:block; position:absolute; top:0; left:0; width:100%; padding:14mm; font-size:11px; }
+    .p-letterhead{ display:flex; gap:14px; align-items:flex-start; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:12px; }
+    .p-letterhead img{ width:58px; }
+    .p-letterhead b{ font-size:15px; display:block; }
+    .p-letterhead div{ font-size:9.5px; color:#333; line-height:1.4; margin-top:3px; }
+    .p-title{ text-align:center; font-weight:700; font-size:17px; letter-spacing:.1em; margin:10px 0 14px; }
+    .p-meta{ display:grid; grid-template-columns:1fr 1fr; gap:2px 10px; font-size:11px; margin-bottom:10px; }
+    .p-terms td{ padding:3px 4px; font-size:11px; vertical-align:top; }
+    .p-terms td.k{ width:130px; font-weight:600; }
+    table.p-items{ width:100%; border-collapse:collapse; font-size:10.5px; margin:12px 0; }
+    table.p-items th{ background:#dde5f0; padding:5px 4px; text-align:left; border:1px solid #999; }
+    table.p-items td{ padding:4px; border:1px solid #ccc; }
+    table.p-items td.num{ text-align:right; }
+    .p-grand{ text-align:right; font-weight:700; font-size:13px; margin-top:6px; border-top:2px solid #000; padding-top:6px; }
+    .p-remarks{ margin-top:14px; font-size:10.5px; }
+    .p-sign{ margin-top:30px; font-size:11px; }
+    .p-sign .name{ font-weight:600; margin-top:30px; }
+    .page-break{ page-break-before: always; }
+    .p-annex-title{ text-align:center; font-weight:700; font-size:14px; margin-bottom:10px; letter-spacing:.05em; }
+    .p-annex{ font-size:9.5px; line-height:1.55; }
+    .p-annex .grp{ font-weight:700; margin:8px 0 4px; }
+    .p-annex ol{ margin:0; padding-left:16px; }
+    .p-annex li{ margin-bottom:3px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ FORM ============ -->
+  <div class="form-col">
+    <h1>DJK Quotation Generator</h1>
+    <div class="sub">Fill in customer, items and terms — company letterhead is fixed. Generates a print-ready PDF matching your Qtn format, and keeps a running log of every quotation you create.</div>
+
+    <div class="fixed-header">
+      <img id="logoImg" src="" alt="DJK">
+      <div class="co-text">
+        <b>DAIICHI JITSUGYO INDIA PRIVATE LIMITED</b>
+        CIN: U74999HR2018FTC072908<br>
+        Head Office: Unit. No.002, Ground Floor, Time Tower, M.G Road, Gurgaon, HARYANA - 122 002 · GSTIN: 06AAGCD5767Q1ZW<br>
+        BLR Office: 2nd Floor, Shezan Lavelle, 15, Walton Road, Shanthala Nagar, Ashok Nagar, Bengaluru - 560 001 · GSTIN: 29AAGCD5767Q1Z0<br>
+        T: +91 80 4131 6934 · E: bairi@djkindia.co.in · djkindia.co.in
+      </div>
+      <div class="locked-tag">FIXED</div>
+    </div>
+
+    <section class="block">
+      <p class="block-title"><span class="num">1</span>Quotation details</p>
+      <div class="row2">
+        <div class="field"><label>Quotation No.</label><input type="text" id="qNo" placeholder="e.g. 2026-04-037_R1_B"></div>
+        <div class="field"><label>Date</label><input type="date" id="qDate"></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="block-title"><span class="num">2</span>Customer</p>
+      <div class="field"><label>Messers (Customer company name)</label><input type="text" id="custName" placeholder="e.g. DAIKIN AIRCONDITIONING INDIA PRIVATE LIMITED"></div>
+      <div class="field"><label>Site / Location</label><input type="text" id="custSite" placeholder="e.g. SRI CITY"></div>
+      <div class="field"><label>Kind Attn.</label><input type="text" id="custAttn" placeholder="e.g. Mr. Rahul B"></div>
+    </section>
+
+    <section class="block">
+      <p class="block-title"><span class="num">3</span>Commercial terms</p>
+      <div class="field"><label>Terms of Payment</label><textarea id="tPayment">Monthly rental invoice will be raised at the end of each month. Implementation invoice will be raised after the implementation is completed. Credit Period: 30 days from the date of invoice.</textarea></div>
+      <div class="row2">
+        <div class="field"><label>Price Basis</label><input type="text" id="tPriceBasis" value="EXW DJK"></div>
+        <div class="field"><label>Delivery Period</label><input type="text" id="tDelivery" value="12 Weeks from the date of PO"></div>
+      </div>
+      <div class="field"><label>Validity</label><input type="text" id="tValidity" value="30 days from the date of submission of quotation"></div>
+    </section>
+
+    <section class="block">
+      <p class="block-title"><span class="num">4</span>Remarks</p>
+      <textarea id="remarks" style="min-height:110px;">Taxes & Duties Extra as applicable at the time of dispatch.
+Quotation is based on Customer provided Information and any other Works need other quotation.
+Incoming utilities like Air, water, Power, Toilet Facilities etc is under customer scope
+Exclusions: Any civil work, Primary Utilities connections, Bank Guarantee/Performance Guarantee, Transit insurance and delays due to Force Majeure.
+Any Additional Material Supply or Installation work shall be charged Extra
+Terms & conditions as per attached Annexure.</textarea>
+      <div class="sub" style="margin:6px 0 0;">One remark per line.</div>
+    </section>
+
+    <section class="block">
+      <p class="block-title"><span class="num">5</span>Items &amp; pricing</p>
+      <div class="paste-box">
+        <p>Paste rows from the principal's/vendor's quote — one item per line: <b>Part No/HSN, Description, UOM, Qty, Vendor Price</b> (tab or comma separated)</p>
+        <textarea id="pasteArea" placeholder="8479.89, Conveyor Module A, Set, 1, 250000"></textarea>
+        <button class="btn small" onclick="parsePaste()">Parse & add rows</button>
+      </div>
+      <table class="items" id="itemsTable">
+        <thead><tr>
+          <th class="col-desc">Description</th><th class="col-narrow">Part No/HSN</th><th class="col-narrow">UOM</th>
+          <th class="col-narrow">Qty</th><th class="col-narrow">Vendor Price</th><th class="col-narrow">Unit Price</th><th></th>
+        </tr></thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+      <button class="btn ghost small" onclick="addRow()" style="margin-top:8px;">+ Add row</button>
+
+      <div class="pricing-strip">
+        <div><label>P&F %</label><input type="number" id="pfPct" value="0" step="0.1"></div>
+        <div><label>Margin % (on selling price)</label><input type="number" id="marginPct" value="15" step="0.1"></div>
+        <div><label>Round to nearest</label><input type="number" id="roundTo" value="10" step="1"></div>
+      </div>
+      <div class="sub">Unit Price = ROUND( VendorPrice × (1 + P&F%) ÷ (1 − Margin%) , nearest ). Matches the P&F / DJK-price / rounding columns in your template (defaults: P&F 0%, margin 15% i.e. the 0.85 factor, round to 10).</div>
+    </section>
+
+    <section class="block">
+      <p class="block-title"><span class="num">6</span>Signatory</p>
+      <div class="row2">
+        <div class="field"><label>Signatory name</label><input type="text" id="signName" value="Mahendra MS"></div>
+        <div class="field"><label>Branch</label><input type="text" id="signBranch" value="Bengaluru Branch"></div>
+      </div>
+    </section>
+
+    <div class="generate-bar">
+      <button class="btn accent" onclick="saveAndPrint()">Save quote & generate PDF</button>
+      <div class="row2">
+        <button class="btn ghost small" onclick="saveOnly()">Save only</button>
+        <button class="btn ghost small" onclick="clearForm()">New blank quote</button>
+      </div>
+      <div class="status" id="statusMsg"></div>
+    </div>
+
+    <section class="block" style="border-top:1px solid var(--line); padding-top:20px; margin-top:8px;">
+      <p class="block-title"><span class="num">7</span>Saved quotations (this device)</p>
+      <div class="db-list" id="dbList"><div class="db-empty">No quotations saved yet.</div></div>
+      <div class="sub" style="margin-top:8px;">PDF downloads land in your browser's normal Downloads folder — pages can't choose a custom OS path, but every file is named Quotation_&lt;No&gt;.pdf so they're easy to find and sort.</div>
+    </section>
+  </div>
+
+  <!-- ============ LIVE PREVIEW ============ -->
+  <div class="preview-col">
+    <div class="sheet" id="previewSheet"><div class="empty-hint">Fill in the form — a live preview appears here.</div></div>
+  </div>
+
+</div>
+
+<!-- ============ PRINT-ONLY DOCUMENT ============ -->
+<div id="printArea"></div>
+
+<script>
+const LOGO_B64 = "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";
+document.getElementById('logoImg').src = "data:image/png;base64," + LOGO_B64;
+
+const ANNEX = [
+["A. Other General Terms & Conditions", [
+"Taxes & Duties Extra as applicable at the time of dispatch.",
+"Customer to provide free space with air, water and electricity supply Free of Charge at site during installation.",
+"Quotation is based on customer provided Information and any other Works required to be done need other qtn.",
+"Does not include Any civil works, Primary Utilities connections, Consumables, Bank Guarantee/Performance Guarantee, Installation Consumables, Isolation Valves, Utility Piping/Plumbing/Electrical/Mechanical Works, Worksite Surveys, Cranes & Rigging etc.",
+"Drawings and Technical Information for Installation will be provided by customer well in advance",
+"Maximum usage of 1 Manpower is 8 hours Shift (working on Public holidays & Sundays will be charged Extra)",
+"Final and Complete Schedule will required minimum 01 month in Advance",
+"An AMBULANCE should be available as Stand-by, provided by Customer",
+"Extra man power if any required will informed to DJK minimum 3 days in advance - on Chargeable Basis",
+"Repeated re-location / re-installation of once installed will be charged on actual basis / pro-rata basis",
+"Work Schedule: Minimum 2 weeks lead time. Manpower movement based on prevailing regulations.",
+"Unloading site and movement area to Installation Site should be Hard Floor.",
+"Security (protected storage) for our vendor Tools & Equipments will be provided by 'Customer'",
+"Area clearance should be done by Customer for equipment movement during movement & Installation",
+"Sufficient soil strength shall be secured for heavy cranes at factory for equipment, accesses for delivery.",
+"Removal and restoring of the obstacles shall be done by Client, for smooth movement during equipment Installation",
+"Sufficient lighting shall be secured and supplied for the work inside the Plant.",
+"Work places shall be with sufficient height, opening and areas for working",
+"During all through the work, EOT Crane (if available) shall be secured for our use at no charge to us.",
+"Wash and rest room inside the Plant designated for us and our subcontractor's personnel shall be secured.",
+"Utility for construction such as power, compressed air and water shall be supplied by Client at site at no charge to us.",
+"Security guard for site and in and outside of the building shall be secured by Client",
+"Customer Safety & Health guidelines, Labour Working Guidelines if any, we need advance information to arrange.",
+"Customer Equipment Safety guidelines, if any, we need advance information to arrange.",
+"Other provisions not stipulated/mentioned here above shall be mutually discussed and settled amicably.",
+"All risk assurance and third party liability insurance during DJK custody to include a full 'Waiver of Subrogation' clause in favor of DJK India and its sub-contractor.",
+"Additional fee shall be paid when our work is suspended by others or any other reason (including matters caused by the customer).",
+"Any cost escalation due to unforeseen circumstances beyond DJK India control shall be discussed amicably between Client and DJK India for mutually agreeable solutions.",
+"Neither Party shall be liable to the other for any loss of revenue, profit, production, product, business, use, or any special, incidental, punitive, consequential or indirect loss arising from delay or performance under the PO.",
+"Insurance for customer Machinery & Equipments will be borne by 'Customer'",
+"DJK India will provide worker's compensation insurance for its staff and workers.",
+"Third party insurance for its equipment; comprehensive public liability, property damage and erection all-risks insurance for the cargo shall be arranged by the client, subject to full waiver of subrogation against DJK India and its subcontractors.",
+"Temporary facilities such as canteen, smoking shelter, water supply, power supply etc. shall be arranged by Client",
+"Other exclusions from our scope include (not limited to): electrical accessories beyond main power SFU/isolator, installation consumables, worksite surveys, compressed air/cooling water beyond machine connections, earthing, disassembling/modifications, local-standard conformity, firefighting systems, lighting/noise/thermal works, pipe supports, cleaning/trial/SAT consumables, personnel training, cabling, waste disposal, and cranes/hoists for pipe installation.",
+"The hydraulic gantry system will work as per the load chart available with the operator under the supervision of the site in-charge.",
+"Any metal sheets, wooden sleepers, sand bags etc if needed, will have to be supplied by you.",
+"Any other statutory requirements/documentation and all entry & exit procedures should be done by you.",
+"Any variations in the rate of taxes, duties, statutory charges and applicability of any new tax/duty shall be charged, if applicable at the time of execution.",
+"Force Majeure: neither party shall be considered in default if performance is prevented or delayed by War, Civil Commotion, Strikes, Lock-outs, Fire, Sabotage, Explosions, Power Cuts, Epidemics, Floods or other acts of God, lasting continuously for one week or more; both parties shall consult regarding future course of action."
+]],
+["B. Other Conditions", [
+"We have right to take back all excess material delivered to site including toolings, welding sets, consumables, accessories/bought outs, scrap etc. which has been sent to site & customer has no claims on the same.",
+"All our pricing is subject to utility supplies by customer within 'Battery limits'. Any variation in equipment or accessory placement besides shown in layout shall be extra on a per-meter basis for Conveyor, Piping, Hot Water Piping, Electricals etc.",
+"Price variation clause: above is subject to current prices ± 2% of CRCA/SS/GI/HR as on date. Any variation in steel prices during supply or due to delay in project by customer are to customer account.",
+"Warranty for Equipments: 12 months from the date of Installation or 15 months from the date of shipment. Warranty for BOP: standard 12 months from Date of Invoice or 15 months from invoice, whichever is earlier. Rubber parts/seals/gaskets/sensors/filters and consumable parts excluded.",
+"Note: Erection will start only after minimum 75% material is received at site. Site must be clear of civil-related works prior to start. Handover dates shall be assumed from first Trial/Batch production or customer invoicing.",
+"Special Note: delayed material readiness must still be paid for and taken delivery of by customer per schedule. Orders once placed cannot be cancelled by buyer (material is special-purpose). Cancellation charges: within 15 days of order — 30% of basic value; after 15 days — 50% of basic value. If buyer does not pick up an ordered consignment, DJK India reserves the right to cancel the order and refund balance after applicable charges.",
+"Delivery Period: as per Customer Schedule, subject to factory availability. Confirmed delivery period provided only upon receipt of a commercially clear and workable purchase order with payment. Godown charges apply in case of delay in material pickup by customer.",
+"Miscellaneous: delivery/installation/commissioning are distinct performance obligations; advance received is adjusted against supply of goods only; modifications specified in the quotation are treated separately; unauthorised third-party modifications void warranty; chiller consumables (O2, N2, cylinder, brazing set, refrigerant gas) are at customer scope; dryer filter to be replaced every 6 months for smooth running."
+]]
+];
+
+let rowCount = 0;
+function uid(){ return 'r' + (++rowCount); }
+
+function addRow(vals){
+  vals = vals || {};
+  const tbody = document.getElementById('itemsBody');
+  const id = uid();
+  const tr = document.createElement('tr');
+  tr.id = id;
+  tr.innerHTML = `
+    <td class="col-desc"><input type="text" class="f-desc" value="${vals.desc||''}"></td>
+    <td><input type="text" class="f-part" value="${vals.part||''}"></td>
+    <td><input type="text" class="f-uom" value="${vals.uom||'Set'}"></td>
+    <td><input type="number" class="f-qty" value="${vals.qty!=null?vals.qty:1}" min="0" step="1"></td>
+    <td><input type="number" class="f-vendor" value="${vals.vendor!=null?vals.vendor:0}" step="0.01"></td>
+    <td><input type="number" class="f-unit" value="0" step="0.01" readonly style="background:#f3f0e8;"></td>
+    <td><button class="rm-row" onclick="removeRow('${id}')">×</button></td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelectorAll('input').forEach(inp => inp.addEventListener('input', recalc));
+  recalc();
+}
+function removeRow(id){ document.getElementById(id).remove(); recalc(); }
+
+function parsePaste(){
+  const raw = document.getElementById('pasteArea').value.trim();
+  if(!raw) return;
+  raw.split('\n').filter(l=>l.trim()).forEach(line=>{
+    let parts = (line.includes('\t') ? line.split('\t') : line.split(',')).map(p=>p.trim());
+    addRow({ part:parts[0]||'', desc:parts[1]||'', uom:parts[2]||'Set', qty:parseFloat(parts[3])||1, vendor:parseFloat(parts[4])||0 });
+  });
+  document.getElementById('pasteArea').value = '';
+}
+
+function roundTo(n, step){ if(!step) return n; return Math.round(n/step)*step; }
+
+function getItems(){
+  const pf = parseFloat(document.getElementById('pfPct').value) || 0;
+  const margin = parseFloat(document.getElementById('marginPct').value) || 0;
+  const rt = parseFloat(document.getElementById('roundTo').value) || 0;
+  const rows = [];
+  document.querySelectorAll('#itemsBody tr').forEach(tr=>{
+    const desc = tr.querySelector('.f-desc').value;
+    const part = tr.querySelector('.f-part').value;
+    const uom = tr.querySelector('.f-uom').value;
+    const qty = parseFloat(tr.querySelector('.f-qty').value) || 0;
+    const vendor = parseFloat(tr.querySelector('.f-vendor').value) || 0;
+    const subTotal = vendor * (1 + pf/100);
+    const denom = 1 - margin/100;
+    const unitRaw = denom > 0 ? subTotal / denom : subTotal;
+    const unit = rt ? roundTo(unitRaw, rt) : unitRaw;
+    const total = unit * qty;
+    tr.querySelector('.f-unit').value = unit.toFixed(2);
+    rows.push({desc, part, uom, qty, vendor, unit, total});
+  });
+  return rows;
+}
+
+function fmt(n){ return Number(n||0).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+
+function collect(){
+  const items = getItems();
+  return {
+    qNo: document.getElementById('qNo').value,
+    qDate: document.getElementById('qDate').value,
+    custName: document.getElementById('custName').value,
+    custSite: document.getElementById('custSite').value,
+    custAttn: document.getElementById('custAttn').value,
+    tPayment: document.getElementById('tPayment').value,
+    tPriceBasis: document.getElementById('tPriceBasis').value,
+    tDelivery: document.getElementById('tDelivery').value,
+    tValidity: document.getElementById('tValidity').value,
+    remarks: document.getElementById('remarks').value.split('\n').filter(l=>l.trim()),
+    pfPct: document.getElementById('pfPct').value,
+    marginPct: document.getElementById('marginPct').value,
+    roundTo: document.getElementById('roundTo').value,
+    signName: document.getElementById('signName').value,
+    signBranch: document.getElementById('signBranch').value,
+    items,
+    grand: items.reduce((s,r)=>s+r.total,0),
+    savedAt: new Date().toISOString()
+  };
+}
+
+function recalc(){
+  const d = collect();
+  let rowsHtml = d.items.map((r,i)=>`
+    <tr><td>${i+1}</td><td>${r.part||''}</td><td>${r.desc||''}</td><td>${r.uom}</td>
+    <td class="num">${r.qty}</td><td class="num">${fmt(r.unit)}</td><td class="num">${fmt(r.total)}</td></tr>`).join('');
+  if(!d.items.length) rowsHtml = `<tr><td colspan="7" style="color:#999;text-align:center;padding:14px;">No items yet</td></tr>`;
+  const remarksHtml = d.remarks.map(r=>`<li>${r}</li>`).join('');
+
+  document.getElementById('previewSheet').innerHTML = `
+    <div class="letterhead">
+      <img src="data:image/png;base64,${LOGO_B64}">
+      <div class="co-block">
+        <b>DAIICHI JITSUGYO INDIA PRIVATE LIMITED</b>
+        <div>CIN: U74999HR2018FTC072908</div>
+        <div>Head Office: Gurgaon, HARYANA · GSTIN: 06AAGCD5767Q1ZW</div>
+        <div>BLR Office: Bengaluru - 560 001 · GSTIN: 29AAGCD5767Q1Z0</div>
+      </div>
+    </div>
+    <div class="qtitle">QUOTATION</div>
+    <div class="meta-grid">
+      <div><span class="k">TO:</span> ${d.custName||'—'}${d.custSite? ' — '+d.custSite:''}</div>
+      <div style="text-align:right;"><span class="k">NO.:</span> ${d.qNo||'—'}</div>
+      <div><span class="k">Kind Attn.:</span> ${d.custAttn||'—'}</div>
+      <div style="text-align:right;"><span class="k">Date:</span> ${d.qDate||'—'}</div>
+    </div>
+    <table class="terms-table">
+      <tr><td class="k">Terms of Payment</td><td>${d.tPayment}</td></tr>
+      <tr><td class="k">Price Basis</td><td>${d.tPriceBasis}</td></tr>
+      <tr><td class="k">Delivery Period</td><td>${d.tDelivery}</td></tr>
+      <tr><td class="k">Validity</td><td>${d.tValidity}</td></tr>
+    </table>
+    <table class="preview-items">
+      <thead><tr><th>SL</th><th>Part/HSN</th><th>Description</th><th>UOM</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="grand">GRAND TOTAL: INR ${fmt(d.grand)}</div>
+    ${d.remarks.length? `<div class="remarks"><b>Remarks:</b><ul>${remarksHtml}</ul></div>`:''}
+    <div class="sign">
+      <div class="name">${d.signName||''}</div>
+      <div>DAIICHI JITSUGYO INDIA PRIVATE LIMITED</div>
+      <div>${d.signBranch||''}</div>
+    </div>
+  `;
+}
+
+document.querySelectorAll('.form-col input, .form-col textarea').forEach(el=>{
+  if(!el.closest('#itemsTable')) el.addEventListener('input', recalc);
+});
+
+function buildPrintHtml(d){
+  let rowsHtml = d.items.map((r,i)=>`
+    <tr><td>${i+1}</td><td>${r.part||''}</td><td>${r.desc||''}</td><td>${r.uom}</td>
+    <td class="num">${r.qty}</td><td class="num">${fmt(r.unit)}</td><td class="num">${fmt(r.total)}</td></tr>`).join('');
+  const remarksHtml = d.remarks.map(r=>`<li>${r}</li>`).join('');
+  const annexHtml = ANNEX.map(([title, lines])=>`
+    <div class="grp">${title}</div>
+    <ol>${lines.map(l=>`<li>${l}</li>`).join('')}</ol>
+  `).join('');
+
+  return `
+    <div class="p-letterhead">
+      <img src="data:image/png;base64,${LOGO_B64}">
+      <div>
+        <b>DAIICHI JITSUGYO INDIA PRIVATE LIMITED</b>
+        <div>CIN: U74999HR2018FTC072908</div>
+        <div>Head Office: Unit. No.002, Ground Floor, Time Tower, M.G Road, Gurgaon, HARYANA - 122 002 · GSTIN: 06AAGCD5767Q1ZW</div>
+        <div>BLR Office: 2nd Floor, Shezan Lavelle, 15, Walton Road, Shanthala Nagar, Ashok Nagar, Bengaluru - 560 001 · GSTIN: 29AAGCD5767Q1Z0</div>
+        <div>T: +91 80 4131 6934 · M: +91 98450 69547 · E: bairi@djkindia.co.in · W: https://djkindia.co.in</div>
+      </div>
+    </div>
+    <div class="p-title">QUOTATION</div>
+    <table class="p-terms" style="width:100%;">
+      <tr><td class="k">TO:</td><td>${d.custName||''}${d.custSite? ' — '+d.custSite:''}</td><td class="k" style="text-align:right;">NO.:</td><td style="text-align:right;">${d.qNo||''}</td></tr>
+      <tr><td class="k">Kind Attn.:</td><td>${d.custAttn||''}</td><td class="k" style="text-align:right;">Date:</td><td style="text-align:right;">${d.qDate||''}</td></tr>
+    </table>
+    <p>We have pleasure in submitting the following quotation to you on the terms and conditions set forth hereunder:</p>
+    <table class="p-terms" style="width:100%;">
+      <tr><td class="k">Terms of Payment:</td><td>${d.tPayment}</td></tr>
+      <tr><td class="k">Price Basis:</td><td>${d.tPriceBasis}</td></tr>
+      <tr><td class="k">Delivery Period:</td><td>${d.tDelivery}</td></tr>
+      <tr><td class="k">Validity:</td><td>${d.tValidity}</td></tr>
+    </table>
+    <table class="p-items">
+      <thead><tr><th>SL No.</th><th>Part No./HSN</th><th>Description</th><th>UOM</th><th>Qty</th><th>Unit Price</th><th>Total Price</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="p-grand">GRAND TOTAL : INR ${fmt(d.grand)}</div>
+    ${d.remarks.length? `<div class="p-remarks"><b>Remarks:</b><ol>${remarksHtml}</ol></div>`:''}
+    <div class="p-sign">
+      <div class="name">${d.signName||''}</div>
+      <div>DAIICHI JITSUGYO INDIA PRIVATE LIMITED</div>
+      <div>${d.signBranch||''}</div>
+    </div>
+    <div class="page-break"></div>
+    <div class="p-annex-title">ANNEXURE — General Terms &amp; Conditions</div>
+    <div class="p-annex">${annexHtml}</div>
+  `;
+}
+
+async function persistQuote(d){
+  if(!d.qNo){ document.getElementById('statusMsg').textContent = 'Add a Quotation No. before saving.'; return false; }
+  try{
+    await window.storage.set('quote:' + d.qNo, JSON.stringify(d));
+    document.getElementById('statusMsg').textContent = 'Saved "' + d.qNo + '" to the saved-quotations list below.';
+    await refreshDb();
+    return true;
+  }catch(e){
+    document.getElementById('statusMsg').textContent = 'Could not save: ' + e.message;
+    return false;
+  }
+}
+
+async function saveOnly(){
+  const d = collect();
+  await persistQuote(d);
+}
+
+async function saveAndPrint(){
+  const d = collect();
+  if(d.items.length === 0){ document.getElementById('statusMsg').textContent = 'Add at least one item first.'; return; }
+  const ok = await persistQuote(d);
+  if(!ok) return;
+  document.getElementById('printArea').innerHTML = buildPrintHtml(d);
+  document.title = 'Quotation_' + d.qNo.replace(/[^\w-]/g,'_');
+  setTimeout(()=> window.print(), 150);
+}
+
+async function refreshDb(){
+  const box = document.getElementById('dbList');
+  try{
+    const res = await window.storage.list('quote:');
+    const keys = (res && res.keys) || [];
+    if(!keys.length){ box.innerHTML = '<div class="db-empty">No quotations saved yet.</div>'; return; }
+    const rows = await Promise.all(keys.map(async k=>{
+      try{ const r = await window.storage.get(k, false); return JSON.parse(r.value); }catch(e){ return null; }
+    }));
+    const valid = rows.filter(Boolean).sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
+    box.innerHTML = valid.map(d => `
+      <div class="db-row">
+        <div class="meta"><b>${d.qNo}</b><span>${d.custName||'—'} · ${d.qDate||''} · INR ${fmt(d.grand)}</span></div>
+        <button class="btn ghost small" onclick='loadQuote(${JSON.stringify(d.qNo)})'>Load</button>
+        <button class="btn ghost small" onclick='reprint(${JSON.stringify(d.qNo)})'>PDF</button>
+        <button class="btn ghost small" onclick='deleteQuote(${JSON.stringify(d.qNo)})'>Delete</button>
+      </div>
+    `).join('');
+  }catch(e){
+    box.innerHTML = '<div class="db-empty">Could not load saved quotations.</div>';
+  }
+}
+
+async function loadQuote(qNo){
+  try{
+    const r = await window.storage.get('quote:' + qNo, false);
+    const d = JSON.parse(r.value);
+    document.getElementById('qNo').value = d.qNo || '';
+    document.getElementById('qDate').value = d.qDate || '';
+    document.getElementById('custName').value = d.custName || '';
+    document.getElementById('custSite').value = d.custSite || '';
+    document.getElementById('custAttn').value = d.custAttn || '';
+    document.getElementById('tPayment').value = d.tPayment || '';
+    document.getElementById('tPriceBasis').value = d.tPriceBasis || '';
+    document.getElementById('tDelivery').value = d.tDelivery || '';
+    document.getElementById('tValidity').value = d.tValidity || '';
+    document.getElementById('remarks').value = (d.remarks||[]).join('\n');
+    document.getElementById('pfPct').value = d.pfPct || 0;
+    document.getElementById('marginPct').value = d.marginPct || 15;
+    document.getElementById('roundTo').value = d.roundTo || 10;
+    document.getElementById('signName').value = d.signName || '';
+    document.getElementById('signBranch').value = d.signBranch || '';
+    document.getElementById('itemsBody').innerHTML = '';
+    (d.items||[]).forEach(it => addRow({part:it.part, desc:it.desc, uom:it.uom, qty:it.qty, vendor:it.vendor}));
+    recalc();
+    document.getElementById('statusMsg').textContent = 'Loaded "' + qNo + '".';
+  }catch(e){
+    document.getElementById('statusMsg').textContent = 'Could not load that quotation.';
+  }
+}
+
+async function reprint(qNo){
+  try{
+    const r = await window.storage.get('quote:' + qNo, false);
+    const d = JSON.parse(r.value);
+    document.getElementById('printArea').innerHTML = buildPrintHtml(d);
+    document.title = 'Quotation_' + qNo.replace(/[^\w-]/g,'_');
+    setTimeout(()=> window.print(), 150);
+  }catch(e){
+    document.getElementById('statusMsg').textContent = 'Could not reprint that quotation.';
+  }
+}
+
+async function deleteQuote(qNo){
+  try{
+    await window.storage.delete('quote:' + qNo, false);
+    await refreshDb();
+  }catch(e){}
+}
+
+function clearForm(){
+  document.getElementById('qNo').value = '';
+  document.getElementById('qDate').valueAsDate = new Date();
+  document.getElementById('custName').value = '';
+  document.getElementById('custSite').value = '';
+  document.getElementById('custAttn').value = '';
+  document.getElementById('itemsBody').innerHTML = '';
+  addRow();
+  recalc();
+  document.getElementById('statusMsg').textContent = '';
+}
+
+document.getElementById('qDate').valueAsDate = new Date();
+addRow();
+recalc();
+refreshDb();
+</script>
+</body>
+</html>
